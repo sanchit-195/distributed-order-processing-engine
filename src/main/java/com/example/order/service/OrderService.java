@@ -1,11 +1,15 @@
 package com.example.order.service;
 
+// Database tables import
 import com.example.order.entity.Order;
 import com.example.order.entity.Payment;
 import com.example.order.entity.Product;
+
+// Repositories to communicate with the database
 import com.example.order.repository.OrderRepository;
 import com.example.order.repository.PaymentRepository;
 import com.example.order.repository.ProductRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
