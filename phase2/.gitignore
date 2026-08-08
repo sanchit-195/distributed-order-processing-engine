@@ -1,0 +1,13 @@
+# Environment variables (contains secrets)
+.env
+
+# Compiled output
+target/
+
+# IDE
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
