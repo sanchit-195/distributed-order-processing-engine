@@ -25,8 +25,13 @@ public class OrderController {
         // the saga determines the final CONFIRMED/FAILED outcome
         // asynchronously. The caller has to poll GET /orders/{id} (or a
         // future webhook/notification) to find out what happened.
+
         Order order = orderService.placeOrder(
-                request.getProductId(), request.getQuantity(), request.getUnitPrice());
+                request.getProductId(),
+                request.getQuantity(),
+                request.getUnitPrice()
+        );
+
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(order);
     }
 

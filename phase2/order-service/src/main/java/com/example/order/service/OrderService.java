@@ -32,11 +32,12 @@ public class OrderService {
      * NOTE: price is hardcoded here as a placeholder since order-service
      * no longer owns Product data - in a real system this would either
      * be passed in by the caller/UI, or looked up via a synchronous call
-     * to inventory-service before the saga starts. Keeping it simple and
-     * explicit for Phase 2's purposes rather than papering over it.
+     * to inventory-service before the saga starts.
      */
     @Transactional
     public Order placeOrder(Long productId, Integer quantity, BigDecimal unitPrice) {
+
+        // Calculate the total amount
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(quantity));
 
         Order order = new Order(productId, quantity, totalAmount, Order.OrderStatus.PENDING_STOCK);
