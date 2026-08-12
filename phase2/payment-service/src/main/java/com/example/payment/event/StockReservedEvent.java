@@ -1,11 +1,12 @@
-package com.example.order.event;
+package com.example.payment.event;
 
 import java.time.Instant;
 
 /**
- * Published by inventory-service to "inventory-events" when stock was
- * successfully deducted. payment-service listens for this to know it's
- * safe to attempt a charge.
+ * The event that actually kicks off payment-service's work. Published by
+ * inventory-service to "inventory-events" once stock is successfully
+ * reserved. payment-service listens for this to know it's safe to
+ * attempt a charge.
  */
 public class StockReservedEvent {
 

@@ -1,13 +1,8 @@
-package com.example.order.event;
+package com.example.payment.event;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * Published by payment-service to "payment-events" when a charge succeeds.
- * order-service listens for this to mark the order CONFIRMED - the happy
- * path terminus of the saga.
- */
 public class PaymentCompletedEvent {
 
     private Long orderId;

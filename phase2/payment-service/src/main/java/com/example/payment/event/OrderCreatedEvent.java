@@ -1,13 +1,8 @@
-package com.example.order.event;
+package com.example.payment.event;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * Published to "order-events" when an order is first created.
- * Kicks off the saga: inventory-service listens for this and attempts
- * to reserve stock.
- */
 public class OrderCreatedEvent {
 
     private Long orderId;

@@ -1,12 +1,7 @@
-package com.example.order.event;
+package com.example.payment.event;
 
 import java.time.Instant;
 
-/**
- * Published by inventory-service to "inventory-events" when there isn't
- * enough stock. order-service listens for this and marks the order
- * FAILED directly - no compensation needed since payment was never touched.
- */
 public class StockReservationFailedEvent {
 
     private Long orderId;

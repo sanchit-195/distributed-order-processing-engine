@@ -1,16 +1,7 @@
-package com.example.order.event;
+package com.example.payment.event;
 
 import java.time.Instant;
 
-/**
- * Published by payment-service to "payment-events" when a charge fails.
- * This is the trigger for the saga's COMPENSATING TRANSACTION:
- *   - order-service marks the order FAILED
- *   - inventory-service listens for this SAME event and releases
- *     (restores) the stock it reserved earlier, undoing its part of
- *     the saga.
- * This is the core distributed-rollback demonstration of Phase 2.
- */
 public class PaymentFailedEvent {
 
     private Long orderId;
