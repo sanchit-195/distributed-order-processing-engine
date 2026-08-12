@@ -1,4 +1,4 @@
-package com.example.order.event;
+package com.example.inventory.event;
 
 import java.time.Instant;
 

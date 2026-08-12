@@ -1,4 +1,4 @@
-package com.example.order.event;
+package com.example.inventory.event;
 
 import java.math.BigDecimal;
 import java.time.Instant;
