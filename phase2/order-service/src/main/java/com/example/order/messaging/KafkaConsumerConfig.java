@@ -50,9 +50,13 @@ public class KafkaConsumerConfig {
         props.put(JsonDeserializer.TYPE_MAPPINGS,
                 "orderCreated:com.example.order.event.OrderCreatedEvent," +
                 "stockReserved:com.example.order.event.StockReservedEvent," +
+                "inventoryDeducted:com.example.order.event.StockReservedEvent," +
                 "stockReservationFailed:com.example.order.event.StockReservationFailedEvent," +
                 "paymentCompleted:com.example.order.event.PaymentCompletedEvent," +
-                "paymentFailed:com.example.order.event.PaymentFailedEvent");
+                "paymentProcessed:com.example.order.event.PaymentCompletedEvent," +
+                "paymentFailed:com.example.order.event.PaymentFailedEvent," +
+                "inventoryRestore:com.example.order.event.InventoryRestoreEvent," +
+                "stockRestored:com.example.order.event.InventoryRestoreEvent");
         // Start reading only NEW messages if this consumer group has never
         // committed an offset before (first run). Prevents replaying old
         // test messages from earlier manual runs.

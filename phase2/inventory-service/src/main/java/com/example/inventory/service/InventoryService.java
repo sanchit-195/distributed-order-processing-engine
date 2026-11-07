@@ -2,6 +2,7 @@ package com.example.inventory.service;
 
 import com.example.inventory.entity.Product;
 import com.example.inventory.entity.StockReservation;
+import com.example.inventory.event.InventoryRestoreEvent;
 import com.example.inventory.event.StockReservationFailedEvent;
 import com.example.inventory.event.StockReservedEvent;
 import com.example.inventory.messaging.InventoryEventProducer;
@@ -11,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Service
 public class InventoryService {
@@ -38,6 +41,11 @@ public class InventoryService {
      */
     @Transactional
     public void reserveStock(Long orderId, Long productId, Integer quantity) {
+        reserveStock(orderId, productId, quantity, null);
+    }
+
+    @Transactional
+    public void reserveStock(Long orderId, Long productId, Integer quantity, BigDecimal totalAmount) {
         // Idempotency check: if Kafka redelivers this OrderCreatedEvent
         // (consumer restart before offset commit, etc), don't reserve
         // twice for the same order.
@@ -74,16 +82,14 @@ public class InventoryService {
         reservationRepository.save(new StockReservation(
                 orderId, productId, quantity, StockReservation.ReservationStatus.RESERVED));
 
-        eventProducer.publishStockReserved(new StockReservedEvent(orderId, productId, quantity));
+        eventProducer.publishStockReserved(new StockReservedEvent(orderId, productId, quantity, totalAmount));
     }
 
     /**
      * The compensating transaction. Reacts to PaymentFailedEvent by
-     * restoring the stock that was deducted in reserveStock() above.
-     * This is manual, explicit rollback logic - the thing Phase 1 got
-     * for free from @Transactional, and Phase 2 has to write by hand
-     * because the reservation and the payment attempt happen in two
-     * completely separate services with no shared transaction.
+     * restoring the stock that was deducted in reserveStock() above
+     * and emitting InventoryRestoreEvent so the saga ecosystem is informed
+     * that stock rollback succeeded.
      */
     @Transactional
     public void releaseStock(Long orderId) {
@@ -118,5 +124,13 @@ public class InventoryService {
 
         log.info("Released {} units of productId={} for orderId={} after payment failure",
                 reservation.getQuantity(), reservation.getProductId(), orderId);
+
+        // Emit InventoryRestore event as required by saga compensating transaction
+        eventProducer.publishInventoryRestore(new InventoryRestoreEvent(
+                orderId,
+                reservation.getProductId(),
+                reservation.getQuantity(),
+                "Stock restored after payment failure"
+        ));
     }
 }

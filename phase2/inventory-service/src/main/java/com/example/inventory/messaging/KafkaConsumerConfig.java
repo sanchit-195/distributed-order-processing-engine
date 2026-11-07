@@ -46,9 +46,13 @@ public class KafkaConsumerConfig {
         props.put(JsonDeserializer.TYPE_MAPPINGS,
                 "orderCreated:com.example.inventory.event.OrderCreatedEvent," +
                 "stockReserved:com.example.inventory.event.StockReservedEvent," +
+                "inventoryDeducted:com.example.inventory.event.StockReservedEvent," +
                 "stockReservationFailed:com.example.inventory.event.StockReservationFailedEvent," +
                 "paymentCompleted:com.example.inventory.event.PaymentCompletedEvent," +
-                "paymentFailed:com.example.inventory.event.PaymentFailedEvent");
+                "paymentProcessed:com.example.inventory.event.PaymentCompletedEvent," +
+                "paymentFailed:com.example.inventory.event.PaymentFailedEvent," +
+                "inventoryRestore:com.example.inventory.event.InventoryRestoreEvent," +
+                "stockRestored:com.example.inventory.event.InventoryRestoreEvent");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         return new DefaultKafkaConsumerFactory<>(props);
     }

@@ -1,6 +1,7 @@
 package com.example.order.messaging;
 
 import com.example.order.entity.Order;
+import com.example.order.event.InventoryRestoreEvent;
 import com.example.order.event.StockReservationFailedEvent;
 import com.example.order.event.StockReservedEvent;
 import com.example.order.repository.OrderRepository;
@@ -12,11 +13,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * A single listener container subscribed to "inventory-events" as group
- * "order-service". Both StockReservedEvent and StockReservationFailedEvent
- * flow through this one topic, so we use @KafkaHandler to dispatch by the
- * deserialized payload's runtime type instead of registering separate
- * listeners on the same group+topic (which would make Kafka split
- * partitions between them instead of both seeing every message).
+ * "order-service". StockReservedEvent, StockReservationFailedEvent, and
+ * InventoryRestoreEvent flow through this one topic, dispatched by runtime type.
  */
 @Component
 @KafkaListener(topics = "inventory-events", groupId = "order-service")
@@ -48,6 +46,15 @@ public class InventoryEventsListener {
             order.setFailureReason(event.getReason());
             orderRepository.save(order);
         }, () -> log.warn("StockReservationFailedEvent for unknown orderId={}", event.getOrderId()));
+    }
+
+    @KafkaHandler
+    public void onInventoryRestore(InventoryRestoreEvent event) {
+        log.info("Received InventoryRestoreEvent for orderId={}: restored {} units of productId={}",
+                event.getOrderId(), event.getQuantity(), event.getProductId());
+        orderRepository.findById(event.getOrderId()).ifPresent(order -> {
+            log.info("Saga rollback confirmed for orderId={}: stock compensated successfully", event.getOrderId());
+        });
     }
 
     @KafkaHandler(isDefault = true)

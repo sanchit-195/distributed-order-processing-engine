@@ -1,5 +1,6 @@
 package com.example.payment.event;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
@@ -13,15 +14,21 @@ public class StockReservedEvent {
     private Long orderId;
     private Long productId;
     private Integer quantity;
+    private BigDecimal totalAmount;
     private Instant occurredAt;
 
     public StockReservedEvent() {
     }
 
     public StockReservedEvent(Long orderId, Long productId, Integer quantity) {
+        this(orderId, productId, quantity, null);
+    }
+
+    public StockReservedEvent(Long orderId, Long productId, Integer quantity, BigDecimal totalAmount) {
         this.orderId = orderId;
         this.productId = productId;
         this.quantity = quantity;
+        this.totalAmount = totalAmount;
         this.occurredAt = Instant.now();
     }
 
@@ -47,6 +54,14 @@ public class StockReservedEvent {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
     }
 
     public Instant getOccurredAt() {

@@ -30,6 +30,6 @@ public class OrderEventsListener {
     public void onOrderCreated(OrderCreatedEvent event) {
         log.info("Received OrderCreatedEvent for orderId={}, productId={}, quantity={}",
                 event.getOrderId(), event.getProductId(), event.getQuantity());
-        inventoryService.reserveStock(event.getOrderId(), event.getProductId(), event.getQuantity());
+        inventoryService.reserveStock(event.getOrderId(), event.getProductId(), event.getQuantity(), event.getTotalAmount());
     }
 }

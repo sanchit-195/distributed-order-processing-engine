@@ -29,10 +29,14 @@ public class KafkaProducerConfig {
         // inventory-service use in their OWN spring.json.type.mapping.
         props.put(JsonSerializer.TYPE_MAPPINGS,
                 "orderCreated:com.example.payment.event.OrderCreatedEvent," +
-                        "stockReserved:com.example.payment.event.StockReservedEvent," +
-                        "stockReservationFailed:com.example.payment.event.StockReservationFailedEvent," +
-                        "paymentCompleted:com.example.payment.event.PaymentCompletedEvent," +
-                        "paymentFailed:com.example.payment.event.PaymentFailedEvent");
+                "stockReserved:com.example.payment.event.StockReservedEvent," +
+                "inventoryDeducted:com.example.payment.event.StockReservedEvent," +
+                "stockReservationFailed:com.example.payment.event.StockReservationFailedEvent," +
+                "paymentCompleted:com.example.payment.event.PaymentCompletedEvent," +
+                "paymentProcessed:com.example.payment.event.PaymentCompletedEvent," +
+                "paymentFailed:com.example.payment.event.PaymentFailedEvent," +
+                "inventoryRestore:com.example.payment.event.InventoryRestoreEvent," +
+                "stockRestored:com.example.payment.event.InventoryRestoreEvent");
         return new DefaultKafkaProducerFactory<>(props);
     }
 

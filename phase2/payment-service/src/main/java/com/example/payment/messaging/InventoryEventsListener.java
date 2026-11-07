@@ -1,5 +1,6 @@
 package com.example.payment.messaging;
 
+import com.example.payment.event.InventoryRestoreEvent;
 import com.example.payment.event.StockReservationFailedEvent;
 import com.example.payment.event.StockReservedEvent;
 import com.example.payment.service.PaymentService;
@@ -10,16 +11,13 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 /**
- * "inventory-events" carries both StockReservedEvent and
- * StockReservationFailedEvent, so - same pattern as order-service and
- * inventory-service's own dual-event-topic listeners - this uses
- * class-level @KafkaListener + @KafkaHandler dispatch, ONE listener
- * container, group "payment-service".
+ * "inventory-events" carries StockReservedEvent, StockReservationFailedEvent,
+ * and InventoryRestoreEvent, so this uses class-level @KafkaListener + @KafkaHandler
+ * dispatch, ONE listener container, group "payment-service".
  *
- * payment-service only acts on StockReservedEvent (that's the signal
- * it's safe to charge). StockReservationFailedEvent needs no action -
- * if stock reservation failed, the order never reaches payment at all,
- * so there's nothing here to do or undo.
+ * payment-service acts on StockReservedEvent (signal that stock is reserved and
+ * safe to charge). StockReservationFailedEvent and InventoryRestoreEvent need no
+ * action in payment-service.
  */
 @Component
 @KafkaListener(topics = "inventory-events", groupId = "payment-service")
@@ -36,13 +34,19 @@ public class InventoryEventsListener {
     @KafkaHandler
     public void onStockReserved(StockReservedEvent event) {
         log.info("Received StockReservedEvent for orderId={}, attempting payment", event.getOrderId());
-        paymentService.processPayment(event.getOrderId(), event.getProductId(), event.getQuantity());
+        paymentService.processPayment(event.getOrderId(), event.getProductId(), event.getQuantity(), event.getTotalAmount());
     }
 
     @KafkaHandler
     public void onStockReservationFailed(StockReservationFailedEvent event) {
         // No-op: order never reached payment, nothing to do here.
         log.debug("Received StockReservationFailedEvent for orderId={}, no action needed", event.getOrderId());
+    }
+
+    @KafkaHandler
+    public void onInventoryRestore(InventoryRestoreEvent event) {
+        // No-op: inventory restored after payment failure, nothing to do in payment-service.
+        log.debug("Received InventoryRestoreEvent for orderId={}, no action needed in payment-service", event.getOrderId());
     }
 
     @KafkaHandler(isDefault = true)

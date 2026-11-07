@@ -32,9 +32,13 @@ public class KafkaProducerConfig {
         props.put(JsonSerializer.TYPE_MAPPINGS,
                 "orderCreated:com.example.inventory.event.OrderCreatedEvent," +
                 "stockReserved:com.example.inventory.event.StockReservedEvent," +
+                "inventoryDeducted:com.example.inventory.event.StockReservedEvent," +
                 "stockReservationFailed:com.example.inventory.event.StockReservationFailedEvent," +
                 "paymentCompleted:com.example.inventory.event.PaymentCompletedEvent," +
-                "paymentFailed:com.example.inventory.event.PaymentFailedEvent");
+                "paymentProcessed:com.example.inventory.event.PaymentCompletedEvent," +
+                "paymentFailed:com.example.inventory.event.PaymentFailedEvent," +
+                "inventoryRestore:com.example.inventory.event.InventoryRestoreEvent," +
+                "stockRestored:com.example.inventory.event.InventoryRestoreEvent");
         return new DefaultKafkaProducerFactory<>(props);
     }
 

@@ -1,5 +1,6 @@
 package com.example.inventory.messaging;
 
+import com.example.inventory.event.InventoryRestoreEvent;
 import com.example.inventory.event.StockReservationFailedEvent;
 import com.example.inventory.event.StockReservedEvent;
 import org.slf4j.Logger;
@@ -29,6 +30,13 @@ public class InventoryEventProducer {
         String key = String.valueOf(event.getOrderId());
         log.info("Publishing StockReservationFailedEvent for orderId={}: {}",
                 event.getOrderId(), event.getReason());
+        kafkaTemplate.send(TOPIC, key, event);
+    }
+
+    public void publishInventoryRestore(InventoryRestoreEvent event) {
+        String key = String.valueOf(event.getOrderId());
+        log.info("Publishing InventoryRestoreEvent for orderId={}: restored {} units of productId={}",
+                event.getOrderId(), event.getQuantity(), event.getProductId());
         kafkaTemplate.send(TOPIC, key, event);
     }
 }
