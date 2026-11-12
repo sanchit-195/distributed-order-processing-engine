@@ -30,9 +30,9 @@ $paymentLogErr = "$PSScriptRoot\payment-service.err.log"
 
 Remove-Item $orderLogOut, $orderLogErr, $inventoryLogOut, $inventoryLogErr, $paymentLogOut, $paymentLogErr -ErrorAction SilentlyContinue
 
-$orderProc = Start-Process java -ArgumentList "-jar", "order-service/target/order-service-1.0.0.jar" -PassThru -RedirectStandardOutput $orderLogOut -RedirectStandardError $orderLogErr
-$inventoryProc = Start-Process java -ArgumentList "-jar", "inventory-service/target/inventory-service-1.0.0.jar" -PassThru -RedirectStandardOutput $inventoryLogOut -RedirectStandardError $inventoryLogErr
-$paymentProc = Start-Process java -ArgumentList "-jar", "payment-service/target/payment-service-1.0.0.jar", "--payment.failing-product-ids=2" -PassThru -RedirectStandardOutput $paymentLogOut -RedirectStandardError $paymentLogErr
+$orderProc = Start-Process java -ArgumentList "-jar", "target/order-service-1.0.0.jar" -PassThru -RedirectStandardOutput $orderLogOut -RedirectStandardError $orderLogErr -WorkingDirectory "$PSScriptRoot\order-service"
+$inventoryProc = Start-Process java -ArgumentList "-jar", "target/inventory-service-1.0.0.jar" -PassThru -RedirectStandardOutput $inventoryLogOut -RedirectStandardError $inventoryLogErr -WorkingDirectory "$PSScriptRoot\inventory-service"
+$paymentProc = Start-Process java -ArgumentList "-jar", "target/payment-service-1.0.0.jar", "--payment.failing-product-ids=2" -PassThru -RedirectStandardOutput $paymentLogOut -RedirectStandardError $paymentLogErr -WorkingDirectory "$PSScriptRoot\payment-service"
 
 Write-Host "order-service PID: $($orderProc.Id) (port 8081)"
 Write-Host "inventory-service PID: $($inventoryProc.Id) (port 8082)"
@@ -59,7 +59,7 @@ try {
     }
 
     function Get-ProductStock($productId) {
-        $val = (psql -U postgres -d inventorydb -t -A -c "SELECT stock FROM products WHERE id=$productId;").Trim()
+        $val = (docker exec postgres psql -U postgres -d inventorydb -t -A -c "SELECT stock FROM products WHERE id=$productId;").Trim()
         return [int]($val -split '\r?\n')[0]
     }
 
@@ -110,6 +110,12 @@ try {
     Write-Host "Product 1 stock after order: $p1StockAfter (expected $($p1StockBefore - 2))"
     if ($p1StockAfter -ne ($p1StockBefore - 2)) {
         throw "Stock was not deducted correctly for Product 1"
+    }
+
+    $resRow = (docker exec postgres psql -U postgres -d inventorydb -t -A -c "SELECT status FROM stock_reservations WHERE order_id=$orderId;").Trim()
+    Write-Host "Stock Reservation status in Docker inventorydb: $resRow"
+    if ($resRow -ne "RESERVED") {
+        throw "Reservation status expected RESERVED but was $resRow"
     }
 
     # ---------------------------------------------------------
@@ -181,9 +187,9 @@ try {
     $p2StockAfter = Get-ProductStock 2
     Write-Host "Product 2 stock after rollback: $p2StockAfter (initial was $p2StockBefore)"
 
-    $reservationRaw = (psql -U postgres -d inventorydb -t -A -c "SELECT status FROM stock_reservations WHERE order_id=$orderId;").Trim()
+    $reservationRaw = (docker exec postgres psql -U postgres -d inventorydb -t -A -c "SELECT status FROM stock_reservations WHERE order_id=$orderId;").Trim()
     $reservationStatus = ($reservationRaw -split '\r?\n')[0]
-    Write-Host "Stock Reservation status in inventorydb: $reservationStatus"
+    Write-Host "Stock Reservation status in Docker inventorydb: $reservationStatus"
 
     if ($p2StockAfter -ne $p2StockBefore) {
         throw "Compensation failed: Stock was not restored! Expected $p2StockBefore but found $p2StockAfter"

@@ -36,8 +36,8 @@ public class InventoryService {
      * Reacts to OrderCreatedEvent. Locks the product row, checks stock,
      * and either reserves it (deduct + record RESERVED) or rejects it
      * (record REJECTED, nothing to deduct). Everything here is one local
-     * transaction - inventory-service's own ACID guarantee for ITS data,
-     * same as Phase 1, just scoped to one step of a larger saga now.
+     * transaction - inventory-service's own ACID guarantee for ITS data.
+     * Events are published AFTER transaction commits.
      */
     @Transactional
     public void reserveStock(Long orderId, Long productId, Integer quantity) {
@@ -46,9 +46,8 @@ public class InventoryService {
 
     @Transactional
     public void reserveStock(Long orderId, Long productId, Integer quantity, BigDecimal totalAmount) {
-        // Idempotency check: if Kafka redelivers this OrderCreatedEvent
-        // (consumer restart before offset commit, etc), don't reserve
-        // twice for the same order.
+        // Idempotency check: if Kafka redelivers this OrderCreatedEvent,
+        // don't reserve twice for the same order.
         if (reservationRepository.findById(orderId).isPresent()) {
             log.info("Reservation for orderId={} already exists, skipping duplicate delivery", orderId);
             return;
@@ -82,6 +81,7 @@ public class InventoryService {
         reservationRepository.save(new StockReservation(
                 orderId, productId, quantity, StockReservation.ReservationStatus.RESERVED));
 
+        // Event will be published to Kafka only AFTER transaction commits
         eventProducer.publishStockReserved(new StockReservedEvent(orderId, productId, quantity, totalAmount));
     }
 
@@ -90,6 +90,7 @@ public class InventoryService {
      * restoring the stock that was deducted in reserveStock() above
      * and emitting InventoryRestoreEvent so the saga ecosystem is informed
      * that stock rollback succeeded.
+     * Guaranteed atomic: status is only marked RELEASED if stock is restored.
      */
     @Transactional
     public void releaseStock(Long orderId) {
@@ -111,13 +112,14 @@ public class InventoryService {
         }
 
         Product product = productRepository.findByIdForUpdate(reservation.getProductId()).orElse(null);
-        if (product != null) {
-            product.setStock(product.getStock() + reservation.getQuantity());
-            productRepository.save(product);
-        } else {
-            log.warn("Product id={} no longer exists, cannot restore stock for orderId={}",
+        if (product == null) {
+            log.error("Product id={} no longer exists, cannot restore stock for orderId={}",
                     reservation.getProductId(), orderId);
+            return;
         }
+
+        product.setStock(product.getStock() + reservation.getQuantity());
+        productRepository.save(product);
 
         reservation.setStatus(StockReservation.ReservationStatus.RELEASED);
         reservationRepository.save(reservation);
@@ -125,7 +127,7 @@ public class InventoryService {
         log.info("Released {} units of productId={} for orderId={} after payment failure",
                 reservation.getQuantity(), reservation.getProductId(), orderId);
 
-        // Emit InventoryRestore event as required by saga compensating transaction
+        // Emit InventoryRestore event as required by saga compensating transaction, AFTER commit
         eventProducer.publishInventoryRestore(new InventoryRestoreEvent(
                 orderId,
                 reservation.getProductId(),

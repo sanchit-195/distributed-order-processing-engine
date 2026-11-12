@@ -5,6 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Component
 public class OrderEventProducer {
@@ -18,12 +22,25 @@ public class OrderEventProducer {
         this.kafkaTemplate = kafkaTemplate;
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void publishOrderCreated(OrderCreatedEvent event) {
-        // Keying by orderId (as a string) ensures every event for the
-        // same order lands on the same partition, so consumers that
-        // care about ordering per-order see them in order.
-        String key = String.valueOf(event.getOrderId());
-        log.info("Publishing OrderCreatedEvent for orderId={}", event.getOrderId());
-        kafkaTemplate.send(TOPIC, key, event);
+        runAfterCommit(() -> {
+            String key = String.valueOf(event.getOrderId());
+            log.info("Publishing OrderCreatedEvent for orderId={}", event.getOrderId());
+            kafkaTemplate.send(TOPIC, key, event);
+        });
+    }
+
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 }

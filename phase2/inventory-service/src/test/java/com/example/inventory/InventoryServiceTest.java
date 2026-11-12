@@ -16,7 +16,6 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -47,15 +46,15 @@ class InventoryServiceTest {
     }
 
     @Test
-    @DisplayName("Happy Path: Reserving stock deducts units and emits StockReservedEvent")
+    @DisplayName("Test 1: Successful reservation - Starting stock 10, reserve 1 -> Stock 9, RESERVED status")
     void testReserveStockSuccess() {
         Long orderId = 1001L;
-        int qty = 3;
+        int qty = 1;
 
-        inventoryService.reserveStock(orderId, testProduct.getId(), qty, new BigDecimal("149.97"));
+        inventoryService.reserveStock(orderId, testProduct.getId(), qty, new BigDecimal("49.99"));
 
         Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
-        assertThat(updated.getStock()).isEqualTo(7);
+        assertThat(updated.getStock()).isEqualTo(9);
 
         StockReservation reservation = reservationRepository.findById(orderId).orElseThrow();
         assertThat(reservation.getStatus()).isEqualTo(StockReservation.ReservationStatus.RESERVED);
@@ -66,11 +65,11 @@ class InventoryServiceTest {
         StockReservedEvent published = captor.getValue();
         assertThat(published.getOrderId()).isEqualTo(orderId);
         assertThat(published.getQuantity()).isEqualTo(qty);
-        assertThat(published.getTotalAmount()).isEqualByComparingTo("149.97");
+        assertThat(published.getTotalAmount()).isEqualByComparingTo("49.99");
     }
 
     @Test
-    @DisplayName("Out of stock: Rejects reservation and emits StockReservationFailedEvent")
+    @DisplayName("Out of stock: Rejects reservation and emits StockReservationFailedEvent without deducting stock")
     void testReserveStockInsufficient() {
         Long orderId = 1002L;
         int qty = 20; // more than 10
@@ -89,15 +88,18 @@ class InventoryServiceTest {
     }
 
     @Test
-    @DisplayName("Compensating Transaction: Payment failure releases stock and emits InventoryRestoreEvent")
+    @DisplayName("Test 2: Payment failure compensation - Stock restored to 10, reservation RELEASED")
     void testCompensatingTransactionReleaseStock() {
         Long orderId = 1003L;
-        int qty = 4;
+        int qty = 1;
 
         // Step 1: Stock is reserved initially
-        inventoryService.reserveStock(orderId, testProduct.getId(), qty, new BigDecimal("199.96"));
+        inventoryService.reserveStock(orderId, testProduct.getId(), qty, new BigDecimal("49.99"));
         Product reservedState = productRepository.findById(testProduct.getId()).orElseThrow();
-        assertThat(reservedState.getStock()).isEqualTo(6);
+        assertThat(reservedState.getStock()).isEqualTo(9);
+
+        StockReservation intermediateRes = reservationRepository.findById(orderId).orElseThrow();
+        assertThat(intermediateRes.getStatus()).isEqualTo(StockReservation.ReservationStatus.RESERVED);
 
         // Step 2: Payment fails, triggering compensating transaction
         inventoryService.releaseStock(orderId);
@@ -119,7 +121,7 @@ class InventoryServiceTest {
     }
 
     @Test
-    @DisplayName("Idempotency: Duplicate OrderCreatedEvent does not deduct stock twice")
+    @DisplayName("Test 3: Duplicate reservation - Duplicate OrderCreatedEvent does not deduct stock twice")
     void testIdempotentStockReservation() {
         Long orderId = 1004L;
         int qty = 2;
@@ -132,7 +134,7 @@ class InventoryServiceTest {
     }
 
     @Test
-    @DisplayName("Idempotency: Duplicate releaseStock does not restore stock twice")
+    @DisplayName("Test 4: Duplicate compensation - Duplicate releaseStock does not restore stock twice")
     void testIdempotentStockRelease() {
         Long orderId = 1005L;
         int qty = 2;
@@ -146,4 +148,3 @@ class InventoryServiceTest {
         verify(eventProducer, times(1)).publishInventoryRestore(any());
     }
 }
-

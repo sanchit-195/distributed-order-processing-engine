@@ -1,7 +1,10 @@
 # Environment variables (contains secrets)
 .env
 
-# Compiled output
+# Logs
+*.log
+*.out.log
+*.err.log
 target/
 
 # IDE
